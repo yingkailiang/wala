@@ -11,8 +11,10 @@
 package com.ibm.wala.cast.js.test;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.JarURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Set;
 
@@ -48,6 +50,8 @@ import com.ibm.wala.ipa.cha.IClassHierarchy;
 import com.ibm.wala.ssa.IRFactory;
 import com.ibm.wala.util.CancelException;
 import com.ibm.wala.util.WalaException;
+import com.ibm.wala.util.io.FileProvider;
+
 
 /**
  * TODO this class is a mess. rewrite.
@@ -89,6 +93,7 @@ public class JSCallGraphBuilderUtil extends com.ibm.wala.cast.js.ipa.callgraph.J
    */
   public static JSCFABuilder makeScriptCGBuilder(String dir, String name, CGBuilderType builderType) throws IOException, WalaException {
     URL script = getURLforFile(dir, name);
+    System.out.println(script);
     CAstRewriterFactory preprocessor = builderType.extractCorrelatedPairs ? new CorrelatedPairExtractorFactory(translatorFactory, script) : null;
     JavaScriptLoaderFactory loaders = JSCallGraphUtil.makeLoaders(preprocessor);
 
@@ -97,13 +102,17 @@ public class JSCallGraphBuilderUtil extends com.ibm.wala.cast.js.ipa.callgraph.J
     return makeCG(loaders, scope, builderType, AstIRFactory.makeDefaultFactory());
   }
 
-  public static URL getURLforFile(String dir, String name) {
-    URL script = JSCallGraphBuilderUtil.class.getClassLoader().getResource(dir + File.separator + name);
-    if (script == null) {
-      script = JSCallGraphBuilderUtil.class.getClassLoader().getResource(dir + "/" + name);
+  public static URL getURLforFile(String dir, String name) throws IOException {
+    File f = null;
+    FileProvider provider = new FileProvider();
+    try {
+      f = provider.getFile(dir + File.separator + name, JSCallGraphBuilderUtil.class.getClassLoader());
+    } catch (FileNotFoundException e) {
+      // I guess we need to do this on Windows sometimes?  --MS
+      // if this fails, we won't catch the exception
+      f = provider.getFile(dir + "/" + name, JSCallGraphBuilderUtil.class.getClassLoader());
     }
-    assert script != null : "cannot find " + dir + " and " + name;
-    return script;
+    return f.toURI().toURL();
   }
   
   static AnalysisScope makeScriptScope(String dir, String name, JavaScriptLoaderFactory loaders) throws IOException {
@@ -126,13 +135,16 @@ public class JSCallGraphBuilderUtil extends com.ibm.wala.cast.js.ipa.callgraph.J
   }
 
   public static CallGraph makeScriptCG(String dir, String name) throws IOException, IllegalArgumentException, CancelException, WalaException {
+   
     return makeScriptCG(dir, name, CGBuilderType.ZERO_ONE_CFA);
   }
 
   public static CallGraph makeScriptCG(String dir, String name, CGBuilderType builderType) throws IOException,
       IllegalArgumentException, CancelException, WalaException {
+    //System.out.println(dir);
     PropagationCallGraphBuilder b = makeScriptCGBuilder(dir, name, builderType);
     CallGraph CG = b.makeCallGraph(b.getOptions());
+    
     // dumpCG(b.getPointerAnalysis(), CG);
     return CG;
   }

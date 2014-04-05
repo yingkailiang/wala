@@ -3,6 +3,7 @@ var editor;
 var fileEntry;
 var hasWriteAccess;
 
+
 function errorHandler(e) {
     var msg = "";
 
@@ -86,6 +87,7 @@ function readFileIntoEditor(theFileEntry) {
         }, errorHandler);
     }
 }
+
 
 function writeEditorToFile(theFileEntry) {
     theFileEntry.createWriter(function(fileWriter) {
@@ -219,3 +221,6 @@ onresize = function() {
 
     editor.refresh();
 }
+
+//Kailiang add fake js file entry 
+readFileIntoEditor(fileEntry);
